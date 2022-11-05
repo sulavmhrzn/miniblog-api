@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from loguru import logger
 from sqlalchemy.orm import Session
 
@@ -11,9 +12,10 @@ from settings import settings
 router = APIRouter(prefix=f"{settings.API_ENTRYPOINT}/users", tags=["User"])
 
 
-@router.get("/")
-def get_me():
-    pass
+@router.get("/", response_model=UserOut)
+def get_me(user: User = Depends(Auth.get_current_user)):
+    """Get data about currently logged in user"""
+    return user
 
 
 @router.post("/create", response_model=UserOut)
@@ -32,3 +34,21 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
     logger.info(f"User created: {user.dict(exclude={'password', 'password2'})}")
     return new_user
+
+
+@router.post("/token")
+def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    """Return a access token if valid data"""
+    user = Auth.authenticate_user(
+        username=form_data.username, password=form_data.password
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or pasword",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    access_token = Auth.create_jwt_token({"sub": user.username})
+    return {"access_token": access_token, "token_type": "bearer"}
