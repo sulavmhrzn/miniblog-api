@@ -1,5 +1,7 @@
 import pydantic
 
+from schemas.blog import BlogOut
+
 
 class UserCreate(pydantic.BaseModel):
     username: str
@@ -16,6 +18,7 @@ class UserCreate(pydantic.BaseModel):
 
 class UserOut(pydantic.BaseModel):
     username: str
+    blogs: list[BlogOut]
 
     class Config:
         orm_mode = True

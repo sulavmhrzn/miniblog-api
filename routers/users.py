@@ -4,6 +4,7 @@ from loguru import logger
 from sqlalchemy.orm import Session
 
 from dependencies import get_db
+from models.blog import Blog
 from models.user import User
 from schemas.user import UserCreate, UserOut
 from services.auth import Auth
@@ -13,9 +14,10 @@ router = APIRouter(prefix=f"{settings.API_ENTRYPOINT}/users", tags=["User"])
 
 
 @router.get("/", response_model=UserOut)
-def get_me(user: User = Depends(Auth.get_current_user)):
+def get_me(db: Session = Depends(get_db), user: User = Depends(Auth.get_current_user)):
     """Get data about currently logged in user"""
-    return user
+    result = db.query(Blog).filter(Blog.user_id == user.id).all()
+    return UserOut(username=user.username, blogs=result)
 
 
 @router.post("/create", response_model=UserOut)
