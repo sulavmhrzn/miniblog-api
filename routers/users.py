@@ -6,18 +6,18 @@ from sqlalchemy.orm import Session
 from dependencies import get_db
 from models.blog import Blog
 from models.user import User
-from schemas.user import UserCreate, UserOut
+from schemas.user import UserBlogs, UserCreate, UserOut
 from services.auth import Auth
 from settings import settings
 
 router = APIRouter(prefix=f"{settings.API_ENTRYPOINT}/users", tags=["User"])
 
 
-@router.get("/", response_model=UserOut)
+@router.get("/", response_model=UserBlogs)
 def get_me(db: Session = Depends(get_db), user: User = Depends(Auth.get_current_user)):
     """Get data about currently logged in user"""
     result = db.query(Blog).filter(Blog.user_id == user.id).all()
-    return UserOut(username=user.username, blogs=result)
+    return UserBlogs(username=user.username, blogs=result)
 
 
 @router.post("/create", response_model=UserOut)

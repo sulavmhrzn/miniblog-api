@@ -18,6 +18,12 @@ class UserCreate(pydantic.BaseModel):
 
 class UserOut(pydantic.BaseModel):
     username: str
+
+    class Config:
+        orm_mode = True
+
+
+class UserBlogs(UserOut):
     blogs: list[BlogOut]
 
     class Config:

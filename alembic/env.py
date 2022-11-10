@@ -21,6 +21,7 @@ if config.config_file_name is not None:
 # target_metadata = mymodel.Base.metadata
 from db import Base
 from models.blog import Blog
+from models.comment import Comment
 from models.user import User
 
 target_metadata = Base.metadata
