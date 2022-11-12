@@ -10,6 +10,7 @@ from models.user import User
 from schemas.blog import BlogCreate, BlogOut
 from services.auth import Auth
 from settings import settings
+from utils import get_object_or_404
 
 router = APIRouter(prefix=f"{settings.API_ENTRYPOINT}/blogs", tags=["Blogs"])
 
@@ -24,16 +25,7 @@ def get_blogs(db: Session = Depends(get_db)):
 @router.get("/{blog_id}", response_model=BlogOut)
 def get_blog(blog_id: int, db: Session = Depends(get_db)):
     """Get a single blog with given id"""
-    logger.info(f"Getting a blog from database with id {blog_id}")
-    blog = db.query(Blog).get(blog_id)
-
-    if not blog:
-        logger.info(f"Blog with id {blog_id} not found")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Blog with id {blog_id} not found.",
-        )
-
+    blog = get_object_or_404(Blog, blog_id)
     return blog
 
 

@@ -7,6 +7,7 @@ from models.blog import Blog
 from models.like import Like
 from models.user import User
 from services.auth import Auth
+from utils import get_object_or_404
 
 router = APIRouter(prefix="/likes", tags=["Likes"])
 
@@ -18,13 +19,7 @@ def like_post(
     user: User = Depends(Auth.get_current_user),
 ):
     """Like a given post if not already liked else remove the like"""
-    blog = db.query(Blog).get(blog_id)
-    if not blog:
-        logger.info(f"Blog with id {blog_id} not found")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Blog not found"
-        )
-
+    blog = get_object_or_404(Blog, blog_id)
     is_already_liked = (
         db.query(Like).filter(Like.post_id == blog_id, Like.user_id == user.id).first()
     )

@@ -9,6 +9,7 @@ from models.user import User
 from schemas.comment import CommentCreate, CommentOut
 from services.auth import Auth
 from settings import settings
+from utils import get_object_or_404
 
 router = APIRouter(prefix=f"{settings.API_ENTRYPOINT}/blogs", tags=["Comments"])
 
@@ -16,16 +17,7 @@ router = APIRouter(prefix=f"{settings.API_ENTRYPOINT}/blogs", tags=["Comments"])
 @router.get("/{blog_id}/comments", response_model=list[CommentOut])
 def get_comments(blog_id: int, db: Session = Depends(get_db)):
     """Get comments for a blog"""
-    logger.info(f"Getting a blog from database with id {blog_id}")
-    blog = db.query(Blog).get(blog_id)
-
-    if not blog:
-        logger.info(f"Blog with id {blog_id} not found")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Blog with id {blog_id} not found.",
-        )
-
+    blog = get_object_or_404(Blog, blog_id)
     comments = db.query(Comment).filter(Comment.post_id == blog_id).all()
     return comments
 
@@ -38,16 +30,8 @@ def create_comment(
     user: User = Depends(Auth.get_current_user),
 ):
     """Create a new comment for a blog"""
-    logger.info(f"Getting a blog from database with id {blog_id}")
-    blog = db.query(Blog).get(blog_id)
 
-    if not blog:
-        logger.info(f"Blog with id {blog_id} not found")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Blog with id {blog_id} not found.",
-        )
-
+    blog = get_object_or_404(Blog, blog_id)
     comment = Comment(content=new_comment.content, post_id=blog.id, user_id=user.id)
     logger.info(f"Creating comment with data: {comment}")
     db.add(comment)
