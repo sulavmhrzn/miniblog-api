@@ -15,9 +15,19 @@ class UserCreate(pydantic.BaseModel):
             raise ValueError("Passwords do not match")
         return v
 
+    @pydantic.validator("username")
+    @classmethod
+    def validate_username(cls, v, values):
+        if " " in v:
+            raise ValueError("Username contains space")
+        if len(v) > 20:
+            raise ValueError("Username exceeds 20 characters")
+        return v
+
 
 class UserOut(pydantic.BaseModel):
     username: str
+    profile_img: str
 
     class Config:
         orm_mode = True

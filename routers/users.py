@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from fastapi.security import OAuth2PasswordRequestForm
 from loguru import logger
 from sqlalchemy.orm import Session
@@ -17,12 +17,13 @@ router = APIRouter(prefix=f"{settings.API_ENTRYPOINT}/users", tags=["User"])
 def get_me(db: Session = Depends(get_db), user: User = Depends(Auth.get_current_user)):
     """Get data about currently logged in user"""
     result = db.query(Blog).filter(Blog.user_id == user.id).all()
-    return UserBlogs(username=user.username, blogs=result)
+    return UserBlogs(username=user.username, blogs=result, profile_img=user.profile_img)
 
 
 @router.post("/create", response_model=UserOut)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
     """Create a new user if username does not exist in the database"""
+
     user_exist = db.query(User).filter(User.username == user.username).first()
     if user_exist:
         logger.info(f"User already exists, Raising HTTPException")
@@ -30,7 +31,9 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST, detail="User already exists"
         )
     user.password = Auth.create_hash_password(user.password.get_secret_value())
-    new_user = User(**user.dict(exclude={"password2"}))
+    profile_img = f"https://avatars.dicebear.com/api/identicon/{user.username}.svg"
+
+    new_user = User(**user.dict(exclude={"password2"}), profile_img=profile_img)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
