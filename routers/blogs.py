@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
 from loguru import logger
 from sqlalchemy.exc import NoResultFound
@@ -16,10 +16,21 @@ router = APIRouter(prefix=f"{settings.API_ENTRYPOINT}/blogs", tags=["Blogs"])
 
 
 @router.get("/", response_model=list[BlogOut])
-def get_blogs(db: Session = Depends(get_db)):
+def get_blogs(
+    limit: int = Query(
+        default=5, description="Number of blogs to retrieve", ge=1, le=20
+    ),
+    offset: int = Query(default=0, description="Number of blogs to skip"),
+    db: Session = Depends(get_db),
+):
     """Get all blogs"""
     logger.info("Getting blogs from database")
-    return db.query(Blog).all()
+
+    blogs_count = db.query(Blog).count()
+    if offset > blogs_count:
+        logger.info(f"Offset greater than number of blogs. Returning {limit} blogs")
+        return db.query(Blog).order_by(-Blog.id).limit(limit).all()
+    return db.query(Blog).limit(limit).offset(offset).all()
 
 
 @router.get("/{blog_id}", response_model=BlogOut)
