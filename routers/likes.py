@@ -9,7 +9,7 @@ from models.user import User
 from services.auth import Auth
 from utils import get_object_or_404
 
-router = APIRouter(prefix="/likes", tags=["Likes"])
+router = APIRouter(prefix="/api/likes", tags=["Likes"])
 
 
 @router.post("/{blog_id}")
