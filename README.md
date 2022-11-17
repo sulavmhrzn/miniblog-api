@@ -3,8 +3,10 @@ A FastAPI powered API for a blog application
 
 ## Tech stack:
 1. FastAPI - Serving API
-2. uvicorn - ASGI Server
+2. Uvicorn - ASGI Server
 3. PostgreSQL - Relational Database 
+4. ORM - SQLAlchemy
+5. Migration - Alembic
 ## Authentication:
 - POST, PUT and DELETE routes require a JWT Token for authentication
 ## Endpoints: 
