@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status, Form
 from fastapi.security import OAuth2PasswordRequestForm
 from loguru import logger
 from sqlalchemy.orm import Session
@@ -57,3 +57,27 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
 
     access_token = Auth.create_jwt_token({"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/change-password")
+def change_password(
+    current_password: str = Form(),
+    new_password: str = Form(),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(Auth.get_current_user),
+):
+    """Change password for currently logged in user"""
+
+    if not Auth.verify_password(current_password, current_user.password):
+        logger.warning(
+            f"Current password did not match for user: {current_user}. Raising HTTPException"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Current password is incorrect.",
+        )
+    logger.info(f"Changing password for user {current_user}")
+    user = db.query(User).get(current_user.id)
+    user.password = Auth.create_hash_password(new_password)
+    db.commit()
+    return {"msg": "Password changed"}
