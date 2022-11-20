@@ -43,3 +43,11 @@ class UserBlogs(UserOut):
 class UserInDB(pydantic.BaseModel):
     id: int
     username: str
+
+
+class SendPasswordReset(pydantic.BaseModel):
+    username: str
+
+
+class ResetPassword(pydantic.BaseModel):
+    password: str

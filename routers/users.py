@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status, Form
+from fastapi import APIRouter, Depends, HTTPException, status, Form
+from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from loguru import logger
 from sqlalchemy.orm import Session
@@ -6,7 +7,13 @@ from sqlalchemy.orm import Session
 from dependencies import get_db
 from models.blog import Blog
 from models.user import User
-from schemas.user import UserBlogs, UserCreate, UserOut
+from schemas.user import (
+    UserBlogs,
+    UserCreate,
+    UserOut,
+    SendPasswordReset,
+    ResetPassword,
+)
 from services.auth import Auth
 from settings import settings
 
@@ -81,3 +88,30 @@ def change_password(
     user.password = Auth.create_hash_password(new_password)
     db.commit()
     return {"msg": "Password changed"}
+
+
+@router.post("/get-password-reset-token")
+def get_password_reset_token(user: SendPasswordReset, db: Session = Depends(get_db)):
+    """Get password reset token"""
+
+    user = db.query(User).filter(User.username == user.username).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+    token = Auth.get_password_reset_token(
+        user_id=user.id,
+        token_expiry_in_hours=settings.PASSWORD_RESET_TOKEN_EXPIRY_HOURS,
+    )
+    return {"reset_token": token}
+
+
+@router.post("/password-reset/{token}")
+def password_reset(token: str, password: ResetPassword):
+    """Reset user password"""
+
+    if Auth.reset_password(token, password.password):
+        return JSONResponse(
+            content={"msg": "Password reset successfull"},
+            status_code=status.HTTP_201_CREATED,
+        )

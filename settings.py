@@ -9,6 +9,7 @@ class Settings(pydantic.BaseSettings):
     JWT_EXPIRE_MINUTES: int
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str
+    PASSWORD_RESET_TOKEN_EXPIRY_HOURS: int
 
     class Config:
         env_file = ".env"

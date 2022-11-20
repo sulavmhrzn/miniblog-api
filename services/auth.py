@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime, timedelta
 
 from fastapi import Depends, HTTPException, status
@@ -8,7 +9,7 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from db import engine
-from models.user import User
+from models.user import User, ResetPassword
 from settings import settings
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/users/token")
@@ -144,3 +145,75 @@ class Auth:
         if not user:
             raise credentials_exception
         return user
+
+    @classmethod
+    def get_password_reset_token(cls, user_id: int, token_expiry_in_hours: int) -> str:
+        """Returns a password reset token
+
+        Args:
+            user_id (int): Valid user id for foreign key
+            token_expiry (str): Password reset token expiry in hours
+
+        Returns:
+            str: Random token
+        """
+        with Session(engine) as db:
+            logger.info("Generating password reset token")
+            token = secrets.token_urlsafe(64)
+            token_expiry = datetime.today() + timedelta(hours=token_expiry_in_hours)
+            obj = ResetPassword(token=token, user_id=user_id, token_expiry=token_expiry)
+            db.add(obj)
+            db.commit()
+        return token
+
+    @classmethod
+    def reset_password(cls, token: str, new_password: str) -> bool:
+        """Validate and reset password
+
+        Args:
+            token (str): Password reset token
+            new_password (str): New password for user
+
+        Raises:
+            HTTPException: If token is invalid
+
+        Returns:
+            bool: True if password reset was successfull
+        """
+        with Session(engine) as db:
+            logger.info("Verifying reset token")
+            token_available = db.query(ResetPassword).get(token)
+            if not token_available:
+                logger.info("Invalid password reset token")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Invalid password reset token",
+                )
+
+            user_id = token_available.user_id
+
+            logger.info(f"Reset token valid for user: {user_id}")
+
+            db.query(ResetPassword).filter(ResetPassword.user_id == user_id).delete()
+            db.commit()
+            logger.info(f"Deleted all existing tokens for user id: {user_id}")
+
+            # Convert a string from database to datetime object
+            # token_expiry = datetime.strptime(
+            #     token_available.token_expiry, "%Y-%m-%d %H:%M:%S.%f"
+            # )
+
+            if token_available.token_expiry < datetime.today():
+                logger.info(
+                    f"Password reset token expired. Token Expiry: {token_available.token_expiry} < Today: {datetime.today()}"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Password reset token expired. Request a new one",
+                )
+
+            user = db.query(User).get(user_id)
+            user.password = cls.create_hash_password(new_password)
+            db.commit()
+            logger.info(f"Password reset for user: {user} successful")
+            return True
